@@ -28,6 +28,16 @@ contract VotingApp is Ownable {
         currentStage = Stage.INITIAL;
     }
 
+    modifier registeredMustEqual(bool mustBeRegistered) {
+        require(isRegistered[msg.sender] == mustBeRegistered);
+        _;
+    }
+
+    modifier onlyInStage(Stage stage) {
+        require(currentStage == stage);
+        _;
+    }
+
     function setStage(uint8 stage) external onlyOwner {
         // FOR TESTING PURPOSES ONLY
         // TODO how to ensure it's not used any other time?
@@ -60,23 +70,19 @@ contract VotingApp is Ownable {
         currentStage = Stage(stage);
     }
 
-    function register() external {
-        require(
-            currentStage == Stage.REGISTER,
-            currentStage == Stage.INITIAL
-                ? "Registering has not started yet"
-                : "Registering has already ended"
-        );
-        require(!isRegistered[msg.sender], "Already registered");
+    function register()
+        external
+        registeredMustEqual(false)
+        onlyInStage(Stage.REGISTER)
+    {
         isRegistered[msg.sender] = true;
     }
 
-    function unregister() external {
-        require(
-            currentStage == Stage.REGISTER,
-            "Registering has already ended"
-        );
-        require(isRegistered[msg.sender], "Not registered");
+    function unregister()
+        external
+        registeredMustEqual(true)
+        onlyInStage(Stage.REGISTER)
+    {
         isRegistered[msg.sender] = false;
     }
 
@@ -84,12 +90,11 @@ contract VotingApp is Ownable {
         return isRegistered[msg.sender];
     }
 
-    modifier onlyRegistered() {
-        require(isRegistered[msg.sender]);
-        _;
-    }
-
-    function populateNumberOfVotes() private {
+    function populateNumberOfVotes()
+        private
+        onlyOwner
+        onlyInStage(Stage.INITIAL)
+    {
         for (uint256 i = 0; i < choices.length; i++) {
             numberOfVotes[choices[i]] = 0;
         }
