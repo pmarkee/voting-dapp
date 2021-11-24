@@ -17,9 +17,9 @@ contract VotingApp is Ownable {
     string[] public choices;
     Stage public currentStage;
 
-    mapping(address => bool) isRegistered;
-    mapping(address => bool) hasVoted;
-    mapping(string => uint256) numberOfVotes;
+    mapping(address => bool) private isRegistered;
+    mapping(address => bool) private hasVoted;
+    mapping(string => uint256) private numberOfVotes;
 
     constructor(string memory _title, string[] memory _choices) {
         title = _title;
@@ -30,6 +30,11 @@ contract VotingApp is Ownable {
 
     modifier registeredMustEqual(bool mustBeRegistered) {
         require(isRegistered[msg.sender] == mustBeRegistered);
+        _;
+    }
+
+    modifier votedMustEqual(bool mustHaveVoted) {
+        require(hasVoted[msg.sender] == mustHaveVoted);
         _;
     }
 
@@ -84,6 +89,25 @@ contract VotingApp is Ownable {
         onlyInStage(Stage.REGISTER)
     {
         isRegistered[msg.sender] = false;
+    }
+
+    function vote(uint256 choice)
+        external
+        registeredMustEqual(true)
+        onlyInStage(Stage.VOTING)
+        votedMustEqual(false)
+    {
+        hasVoted[msg.sender] = true;
+        numberOfVotes[choices[choice]]++;
+    }
+
+    function haveIVoted()
+        external
+        view
+        registeredMustEqual(true)
+        returns (bool)
+    {
+        return hasVoted[msg.sender];
     }
 
     function amIRegistered() external view returns (bool) {
