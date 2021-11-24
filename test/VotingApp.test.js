@@ -150,11 +150,10 @@ contract("VotingApp", ([owner, user, other_user]) => {
         await votingApp.setStage(Stage.REGISTER);
 
         const isRegistered = await votingApp.amIRegistered({ from: user });
-        if (isRegistered) {
-          await votingApp.unregister({ from: user });
+        if (!isRegistered) {
+          await votingApp.register({ from: user });
         }
 
-        await votingApp.register({ from: user });
         await votingApp.advance({ from: owner });
       });
 
@@ -187,6 +186,37 @@ contract("VotingApp", ([owner, user, other_user]) => {
       it("voting is disabled", async () => {
         await votingApp.vote(CHOICE.Choice_1, { from: user }).should.be
           .rejected;
+      });
+    });
+
+    describe("Before or during voting stage", async () => {
+      before(async () => {
+        await votingApp.setStage(Stage.VOTING, { from: owner });
+      });
+
+      it("acquiring results is forbidden", async () => {
+        await votingApp.getResults({ from: owner }).should.be.rejected;
+        await votingApp.getResults({ from: user }).should.be.rejected;
+      });
+    });
+
+    describe("After voting stage", async () => {
+      before(async () => {
+        await votingApp.setStage(Stage.END, { from: owner });
+      });
+
+      it("acquiring results is allowed", async () => {
+        await votingApp.getResults().should.be.fulfilled;
+      });
+
+      it("results are counted accurately", async () => {
+        const results = await votingApp.getResults({ from: user });
+        console.log(results.map((result) => result.words[0]) == [1, 0]);
+        console.log(results.map((result) => result.words[0]) === [1, 0]);
+        assert.equal(
+          JSON.stringify(results.map((result) => result.words[0])),
+          JSON.stringify([1, 0])
+        );
       });
     });
   });

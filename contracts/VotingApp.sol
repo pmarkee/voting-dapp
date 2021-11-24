@@ -19,13 +19,13 @@ contract VotingApp is Ownable {
 
     mapping(address => bool) private isRegistered;
     mapping(address => bool) private hasVoted;
-    mapping(string => uint256) private numberOfVotes;
+    uint256[] numberOfVotes;
 
     constructor(string memory _title, string[] memory _choices) {
         title = _title;
         choices = _choices;
-        populateNumberOfVotes();
         currentStage = Stage.INITIAL;
+        populateNumberOfVotes();
     }
 
     modifier registeredMustEqual(bool mustBeRegistered) {
@@ -39,7 +39,7 @@ contract VotingApp is Ownable {
     }
 
     modifier onlyInStage(Stage stage) {
-        require(currentStage == stage);
+        require(currentStage == stage, "Invalid stage for requested operation");
         _;
     }
 
@@ -98,7 +98,7 @@ contract VotingApp is Ownable {
         votedMustEqual(false)
     {
         hasVoted[msg.sender] = true;
-        numberOfVotes[choices[choice]]++;
+        numberOfVotes[choice]++;
     }
 
     function haveIVoted()
@@ -114,13 +114,23 @@ contract VotingApp is Ownable {
         return isRegistered[msg.sender];
     }
 
+    function getResults()
+        external
+        view
+        onlyInStage(Stage.END)
+        returns (uint256[] memory)
+    {
+        return numberOfVotes;
+    }
+
     function populateNumberOfVotes()
         private
         onlyOwner
         onlyInStage(Stage.INITIAL)
     {
+        numberOfVotes = new uint256[](choices.length);
         for (uint256 i = 0; i < choices.length; i++) {
-            numberOfVotes[choices[i]] = 0;
+            numberOfVotes[i] = 0;
         }
     }
 }
